@@ -15,7 +15,11 @@ const MONGO_URI = process.env.MONGO_URI
 const port = process.env.PORT || 3000;
 app.use(bodyParser.urlencoded({ extended: false }))
 
-mongoose.connect(MONGO_URI)
+mongoose.connect(MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 5000
+})
   .then(() => console.log('Connected to MongoDB!'))
 
 const URLSchema = new Schema({
@@ -41,14 +45,14 @@ app.get('/api/hello', function (req, res) {
 // Convert URL to shortened URL at endpoint /api/shorturl/
 app.post('/api/shorturl/', async (req, res) => {
   const url = req.body.url
-  const urlId = uid()
-  console.log('Newly generated url ID: ', urlId)
-
   if (!validUrl.isWebUri(url)) {
-    res.status(404).json({
-      error: 'Invalid URL'
+    res.json({
+      error: 'invalid url'
     })
+    next()
   } else {
+    const urlId = uid()
+    console.log('Newly generated url ID: ', urlId)
     try {
       let found = await URL.findOne({
         original_url: url
@@ -83,11 +87,11 @@ app.get('/api/shorturl/:shortUrl', async (req, res) => {
       short_url
     })
     if (!found) {
-      res.status(404).json({
-        error: 'invalid url'
+      return res.status(404).json({
+        error: 'No short URL found for the given input'
       })
     } else {
-      res.redirect(found.original_url)
+      return res.redirect(found.original_url)
     }
   } catch (error) {
     console.log(error)
